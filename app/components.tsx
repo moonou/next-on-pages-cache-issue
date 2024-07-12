@@ -6,7 +6,7 @@ export default function Button() {
 
 
     const onClick = async () => {
-        await clearCache('jokes')
+        await clearCache()
     }
 
     return (

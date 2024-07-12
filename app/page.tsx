@@ -1,24 +1,62 @@
 import Button from "@/app/components";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 
 export const runtime = "edge";
 
-export default async function Home() {
-  const data = await fetch("https://v2.jokeapi.dev/joke/Any", {
-    // next: { revalidate: 10, tags: ["jokes"] },
+const getFetcher = ({
+  previewToken,
+}: {
+  previewToken?: string;
+} = {}): typeof fetch => {
+  if (previewToken)
+    return (url, init) =>
+      fetch(url, {
+        ...(init ?? {}),
+        cache: "no-cache",
+        headers: {
+          ...(init?.headers ?? {}),
+          Authorization: `JWT ${previewToken}`,
+        },
+      });
 
-    cf: {
-      // Always cache this fetch regardless of content type
-      // for a max of 5 seconds before revalidating the resource
-      cacheTtl: 60,
-      cacheEverything: true,
-      //Enterprise only feature, see Cache API for other plans
-    },
-  });
+  const cloudflareKV = getRequestContext().env.TEST_KV;
+
+  return async (url, init) => {
+    if (init?.method && init?.method !== "GET") return fetch(url, init);
+
+    const href =
+      url instanceof Request ? url.url : url instanceof URL ? url.href : url;
+
+    const valueByURL = await cloudflareKV.get(href);
+
+    if (valueByURL)
+      return {
+        json: () => JSON.parse(valueByURL),
+        ok: true,
+        status: 200,
+      } as Response;
+
+    const response = await fetch(href, { ...init, cache: "no-cache" });
+
+    const json = await response.clone().json();
+
+    await cloudflareKV.put(href, JSON.stringify(json));
+
+    return response;
+  };
+};
+
+async function getData() {
+  const res = await getFetcher()("https://v2.jokeapi.dev/joke/Any");
+  return res.json();
+}
+
+export default async function Home() {
+  const data = await getData();
 
   return (
     <>
-      <Button />
-      <pre>{JSON.stringify(await data.json(), null, 2)}</pre>
+      <Button /><pre>{JSON.stringify(data, null, 2)}</pre>
     </>
   );
 }

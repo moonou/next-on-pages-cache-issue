@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "fetch-test"
+name = "next-on-pages-cache-issue"
 compatibility_date = "2024-06-20"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
@@ -85,3 +85,6 @@ pages_build_output_dir = ".vercel/output/static"
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
 # id = "<PRODUCTION_NAMESPACE_ID>"
+[[kv_namespaces]]
+binding = "TEST_KV"
+id = "9edad9dea73e445db380a3ccb05b4873"
